@@ -1,0 +1,103 @@
+{
+  "name": "Module 7 - Outreach Generator",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "start-module-7",
+      "name": "Start from Module 6",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [240, 400],
+      "notes": "📥 INPUT FROM MODULE 6\n\nReceives:\n- runId: Execution ID\n- contactsFound: Number of contacts\n- status: 'Contacts Enriched'\n\nThis module generates personalized outreach for each contact."
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID_HERE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Contacts",
+          "mode": "list"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "lastContacted",
+              "lookupValue": "Not Yet"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "read-contacts-to-reach",
+      "name": "Read Contacts (Not Contacted)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.2,
+      "position": [460, 400],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_CREDENTIALS_ID",
+          "name": "Google Sheets - Job Hunt"
+        }
+      },
+      "notes": "📊 READ CONTACTS FROM SHEET\n\n⚠️ SETUP REQUIRED:\n\n1. Google Sheets credential\n2. Sheet ID\n3. Sheet: 'Contacts'\n4. Filter: lastContacted = 'Not Yet'\n\nPURPOSE: Read contacts that haven't been reached out to yet\n\nFILTER LOGIC:\n- Only new contacts\n- lastContacted = 'Not Yet'\n- Prevents duplicate outreach\n\nLIMIT: Will process 5-10 contacts per run\n\nWHAT TO SET:\n✅ Same Sheet config as previous modules"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Limit to 5 contacts per run to keep AI costs low\nconst allContacts = $input.all();\n\n// Only process contacts with email OR LinkedIn\nconst validContacts = allContacts.filter(contact => {\n  const data = contact.json;\n  const hasEmail = data.email || data['Email'];\n  const hasLinkedIn = data.linkedinUrl || data['LinkedIn URL'];\n  return hasEmail || hasLinkedIn;\n});\n\n// Limit to first 5\nconst limitedContacts = validContacts.slice(0, 5);\n\nreturn limitedContacts;"
+      },
+      "id": "limit-contacts",
+      "name": "Limit to 5 Contacts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 400],
+      "notes": "🔢 LIMIT CONTACTS\n\nPURPOSE: Process only 5 contacts per run\n\nWHY LIMIT:\n- AI costs (if using OpenAI)\n- Processing time\n- Manual review capacity\n- Quality over quantity\n\nVALIDATION:\n- Must have email OR LinkedIn\n- Skip contacts with neither\n\nTO ADJUST:\n- Change .slice(0, 5) to .slice(0, 10)\n\nRECOMMENDED:\n- Start with 5\n- Review quality\n- Increase if needed"
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID_HERE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Jobs",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "id": "read-job-details",
+      "name": "Read Job Details",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.2,
+      "position": [900, 400],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_CREDENTIALS_ID",
+          "name": "Google Sheets - Job Hunt"
+        }
+      },
+      "notes": "📊 READ JOB DETAILS\n\nPURPOSE: Get full job information to personalize outreach\n\nWHY NEEDED:\n- Contact tab has jobId reference\n- Need full job details for personalization:\n  - Job title\n  - Company name\n  - Location\n  - Key skills\n  - Job description\n\nJOIN LOGIC:\n- Contact has jobId\n- Match to Jobs tab by jobId\n- Merge data for AI prompt\n\nWHAT TO SET:\n✅ Same Sheet ID, Jobs tab"
+    }
+  ],
+  "connections": {
+    "Start from Module 6": {
+      "main": [[{"node": "Read Contacts (Not Contacted)", "type": "main", "index": 0}]]
+    },
+    "Read Contacts (Not Contacted)": {
+      "main": [[{"node": "Limit to 5 Contacts", "type": "main", "index": 0}]]
+    },
+    "Limit to 5 Contacts": {
+      "main": [[{"node": "Read Job Details", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "jobTitles": {
+    "primary": [
+      "Sales Development Representative",
+      "Business Development Representative",
+      "SDR",
+      "BDR"
+    ],
+    "secondary": [
+      "GTM Engineer",
+      "Go-To-Market Engineer",
+      "Sales Engineer",
+      "Automation Expert",
+      "Sales Operations"
+    ]
+  },
+  "skillsRequired": {
+    "core": [
+      "outbound",
+      "lead generation",
+      "prospecting",
+      "cold email",
+      "cold calling"
+    ],
+    "tools": [
+      "Apollo",
+      "Clay",
+      "HubSpot",
+      "Salesforce",
+      "LinkedIn Sales Navigator",
+      "Outreach",
+      "SalesLoft"
+    ],
+    "automation": [
+      "workflow automation",
+      "sales automation",
+      "AI automation",
+      "CRM automation"
+    ]
+  },
+  "exclusions": {
+    "titles": [
+      "Senior Manager",
+      "Director",
+      "VP",
+      "Customer Support",
+      "Customer Success"
+    ],
+    "types": [
+      "field sales",
+      "door-to-door",
+      "unpaid",
+      "internship only"
+    ]
+  },
+  "locations": {
+    "tier1": [
+      "Bangalore",
+      "Bengaluru",
+      "Hyderabad",
+      "Chennai"
+    ],
+    "tier2": [
+      "Coimbatore",
+      "Gurugram",
+      "Gurgaon",
+      "Mumbai",
+      "Pune",
+      "Delhi"
+    ],
+    "country": "India"
+  }
+}

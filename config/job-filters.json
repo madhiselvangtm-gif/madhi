@@ -1,0 +1,59 @@
+{
+  "searchKeywords": [
+    "Sales Development Representative",
+    "Business Development Representative",
+    "SDR",
+    "BDR",
+    "GTM Engineer",
+    "Go-To-Market Engineer",
+    "Automation Expert"
+  ],
+  "preferredKeywords": [
+    "outbound automation",
+    "lead generation",
+    "Apollo",
+    "Clay",
+    "cold email",
+    "LinkedIn outreach",
+    "CRM",
+    "AI automation",
+    "sales automation",
+    "prospecting",
+    "workflow automation",
+    "HubSpot",
+    "Salesforce"
+  ],
+  "excludedKeywords": [
+    "senior manager",
+    "field sales",
+    "door-to-door sales",
+    "customer support",
+    "unpaid internship"
+  ],
+  "experienceLevels": [
+    "mid",
+    "mid-level",
+    "senior",
+    "3-5 years",
+    "5+ years"
+  ],
+  "workModes": [
+    "remote",
+    "hybrid",
+    "on-site",
+    "work from home"
+  ],
+  "priorityLocations": [
+    "Bangalore",
+    "Bengaluru",
+    "Hyderabad",
+    "Chennai",
+    "Coimbatore",
+    "Gurugram",
+    "Gurgaon",
+    "Mumbai",
+    "India"
+  ],
+  "maxJobsPerPlatform": 50,
+  "deduplicationField": "Job ID"
+}

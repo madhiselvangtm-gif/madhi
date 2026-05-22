@@ -1,0 +1,263 @@
+{
+  "name": "Module 4 - Google Sheets Logger",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "start-module-4",
+      "name": "Start from Module 3",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [240, 400],
+      "notes": "📥 INPUT FROM MODULE 3\n\nReceives:\n- filteredJobs: Array of filtered, deduplicated jobs\n- jobCount: Number of new jobs\n- runId: Execution ID\n- status: 'Filtered'\n\nThis is the entry point from Module 3."
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID_HERE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Jobs",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "jobId": "={{ $json.jobId }}",
+            "dateScraped": "={{ $json.dateScraped }}",
+            "sourcePlatform": "={{ $json.sourcePlatform }}",
+            "jobTitle": "={{ $json.jobTitle }}",
+            "companyName": "={{ $json.companyName }}",
+            "companySize": "={{ $json.companySize }}",
+            "location": "={{ $json.location }}",
+            "workMode": "={{ $json.workMode }}",
+            "experienceLevel": "={{ $json.experienceLevel }}",
+            "salaryRange": "={{ $json.salaryRange }}",
+            "jobDescription": "={{ $json.jobDescription }}",
+            "keySkills": "={{ $json.keySkills }}",
+            "jobUrl": "={{ $json.jobUrl }}",
+            "postedDate": "={{ $json.postedDate }}",
+            "applicationDeadline": "={{ $json.applicationDeadline }}",
+            "matchScore": "={{ $json.matchScore }}",
+            "status": "={{ $json.status }}",
+            "resumeLink": "={{ $json.resumeLink }}",
+            "notes": "={{ $json.notes }}",
+            "lastUpdated": "={{ $json.lastUpdated }}"
+          }
+        },
+        "options": {
+          "useAppend": true
+        }
+      },
+      "id": "write-jobs-to-sheet",
+      "name": "Write Jobs to Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.2,
+      "position": [460, 400],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_CREDENTIALS_ID",
+          "name": "Google Sheets - Job Hunt"
+        }
+      },
+      "notes": "📊 WRITE TO GOOGLE SHEETS - JOBS TAB\n\n⚠️ SETUP REQUIRED:\n\n1. Configure Google Sheets credential\n2. Set Document ID: YOUR_GOOGLE_SHEET_ID_HERE\n3. Set Sheet Name: 'Jobs'\n4. Operation: 'Append or Update Row'\n5. Verify all 20 columns are mapped\n\nPURPOSE: Write filtered jobs to Jobs tab\n\nMAPPING: All 20 columns from schema:\n- A: jobId\n- B: dateScraped\n- C: sourcePlatform\n- D: jobTitle\n- E: companyName\n- F: companySize\n- G: location\n- H: workMode\n- I: experienceLevel\n- J: salaryRange\n- K: jobDescription\n- L: keySkills\n- M: jobUrl\n- N: postedDate\n- O: applicationDeadline\n- P: matchScore\n- Q: status\n- R: resumeLink\n- S: notes\n- T: lastUpdated\n\nOPTION: useAppend = true\n- Adds new rows at bottom\n- Faster than update mode\n\nTEST:\n- Execute node\n- Check Google Sheet → Jobs tab\n- Should see new rows added"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Count jobs written\nconst jobsWritten = $input.all().length;\nconst runId = $('Start from Module 3').first().json.runId;\n\nreturn [{\n  json: {\n    jobsWritten: jobsWritten,\n    runId: runId,\n    timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),\n    status: 'Success',\n    message: `Successfully wrote ${jobsWritten} jobs to Google Sheets`\n  }\n}];"
+      },
+      "id": "count-jobs-written",
+      "name": "Count Jobs Written",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 400],
+      "notes": "📊 COUNT & LOG\n\nPURPOSE: Count how many jobs were written\n\nOUTPUT:\n- jobsWritten: Number count\n- runId: Execution ID\n- timestamp: Current time\n- status: Success\n\nThis data flows to:\n1. Logs tab (for record keeping)\n2. Module 5 (Resume Tailor)\n\nWHAT TO SET:\n✅ Nothing! Auto-counts."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "log-id",
+              "name": "logId",
+              "value": "={{ $json.runId }}-jobs-logged",
+              "type": "string"
+            },
+            {
+              "id": "log-timestamp",
+              "name": "timestamp",
+              "value": "={{ $json.timestamp }}",
+              "type": "string"
+            },
+            {
+              "id": "log-runid",
+              "name": "workflowRunId",
+              "value": "={{ $json.runId }}",
+              "type": "string"
+            },
+            {
+              "id": "log-module",
+              "name": "module",
+              "value": "Module 4 - Google Sheets Logger",
+              "type": "string"
+            },
+            {
+              "id": "log-action",
+              "name": "action",
+              "value": "Write Jobs to Sheet",
+              "type": "string"
+            },
+            {
+              "id": "log-status",
+              "name": "status",
+              "value": "={{ $json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "log-records",
+              "name": "recordsProcessed",
+              "value": "={{ $json.jobsWritten }}",
+              "type": "number"
+            },
+            {
+              "id": "log-error",
+              "name": "errorMessage",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "log-retry",
+              "name": "retryCount",
+              "value": "=0",
+              "type": "number"
+            },
+            {
+              "id": "log-notes",
+              "name": "notes",
+              "value": "={{ $json.message }}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "format-log-entry",
+      "name": "Format Log Entry",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [900, 400],
+      "notes": "📝 FORMAT LOG\n\nPURPOSE: Format execution log for Logs tab\n\nMaps to Logs schema (10 columns):\n- logId\n- timestamp\n- workflowRunId\n- module\n- action\n- status\n- recordsProcessed\n- errorMessage\n- retryCount\n- notes\n\nWHAT TO SET:\n✅ Nothing! Auto-formats."
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID_HERE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Logs",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "logId": "={{ $json.logId }}",
+            "timestamp": "={{ $json.timestamp }}",
+            "workflowRunId": "={{ $json.workflowRunId }}",
+            "module": "={{ $json.module }}",
+            "action": "={{ $json.action }}",
+            "status": "={{ $json.status }}",
+            "recordsProcessed": "={{ $json.recordsProcessed }}",
+            "errorMessage": "={{ $json.errorMessage }}",
+            "retryCount": "={{ $json.retryCount }}",
+            "notes": "={{ $json.notes }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "write-to-logs",
+      "name": "Write to Logs Tab",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.2,
+      "position": [1120, 400],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_CREDENTIALS_ID",
+          "name": "Google Sheets - Job Hunt"
+        }
+      },
+      "notes": "📊 WRITE TO LOGS TAB\n\n⚠️ SETUP REQUIRED:\n\n1. Use same Google Sheets credential\n2. Same Sheet ID\n3. Sheet Name: 'Logs'\n4. Operation: 'Append'\n\nPURPOSE: Log this module's execution\n\nLOGS:\n- How many jobs were written\n- Execution timestamp\n- Success status\n\nWHAT TO SET:\n✅ Same as Jobs tab - just change sheet name to 'Logs'"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "output-runid",
+              "name": "runId",
+              "value": "={{ $('Start from Module 3').first().json.runId }}",
+              "type": "string"
+            },
+            {
+              "id": "output-jobcount",
+              "name": "jobsLogged",
+              "value": "={{ $('Count Jobs Written').first().json.jobsWritten }}",
+              "type": "number"
+            },
+            {
+              "id": "output-status",
+              "name": "status",
+              "value": "Logged",
+              "type": "string"
+            },
+            {
+              "id": "output-message",
+              "name": "message",
+              "value": "Jobs successfully logged to Google Sheets. Ready for Module 5 (Resume Tailor).",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "output-to-module-5",
+      "name": "Output to Module 5",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [1340, 400],
+      "notes": "🚀 OUTPUT TO MODULE 5\n\nPURPOSE: Prepare data for Resume Tailor module\n\nOUTPUT:\n- runId: To track which jobs belong to this run\n- jobsLogged: Count for reference\n- status: 'Logged'\n\nNEXT MODULE: Module 5 - Resume Tailor\n- Will read jobs with status='Discovered'\n- Generate tailored resumes for each\n\nWHAT TO SET:\n✅ Nothing! Auto-prepares output."
+    }
+  ],
+  "connections": {
+    "Start from Module 3": {
+      "main": [[{"node": "Write Jobs to Sheet", "type": "main", "index": 0}]]
+    },
+    "Write Jobs to Sheet": {
+      "main": [[{"node": "Count Jobs Written", "type": "main", "index": 0}]]
+    },
+    "Count Jobs Written": {
+      "main": [[{"node": "Format Log Entry", "type": "main", "index": 0}]]
+    },
+    "Format Log Entry": {
+      "main": [[{"node": "Write to Logs Tab", "type": "main", "index": 0}]]
+    },
+    "Write to Logs Tab": {
+      "main": [[{"node": "Output to Module 5", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "createdAt": "2026-05-22T00:00:00.000Z",
+      "updatedAt": "2026-05-22T00:00:00.000Z",
+      "id": "job-hunt-automation",
+      "name": "Job Hunt Automation"
+    }
+  ]
+}

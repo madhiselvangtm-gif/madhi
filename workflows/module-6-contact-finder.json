@@ -1,0 +1,119 @@
+{
+  "name": "Module 6 - Contact Finder",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "start-module-6",
+      "name": "Start from Module 4/5",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [240, 400],
+      "notes": "📥 INPUT\n\nCan receive from:\n- Module 4 (if skipping Module 5)\n- Module 5 (if resume tailoring enabled)\n\nReceives:\n- runId: Execution ID\n- jobsLogged: Count of jobs\n\nThis module finds recruiter contacts for each job."
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID_HERE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Jobs",
+          "mode": "list"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "status",
+              "lookupValue": "Discovered"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "read-jobs-for-contacts",
+      "name": "Read Jobs Needing Contacts",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.2,
+      "position": [460, 400],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_CREDENTIALS_ID",
+          "name": "Google Sheets - Job Hunt"
+        }
+      },
+      "notes": "📊 READ JOBS FROM SHEET\n\n⚠️ SETUP REQUIRED:\n\n1. Google Sheets credential\n2. Sheet ID\n3. Sheet: 'Jobs'\n4. Filter: status IN ('Discovered', 'Resume Sent')\n\nPURPOSE: Read jobs that need contact enrichment\n\nLIMIT: Process 10-20 jobs per run to respect Apollo.io free tier (50 credits/month)\n\nFILTER LOGIC:\n- Jobs without contacts yet\n- Status = Discovered or Resume Sent\n\nWHAT TO SET:\n✅ Same Sheet config as Module 4"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Limit to 10 jobs to preserve Apollo.io free credits (50/month)\nconst allJobs = $input.all();\n\n// Filter out jobs that already have contacts\nconst jobsNeedingContacts = allJobs.filter(job => {\n  const data = job.json;\n  // Check if we already searched for contacts (to avoid re-processing)\n  const notes = data.notes || data['Notes'] || '';\n  return !notes.includes('Contact search completed');\n});\n\n// Limit to first 10\nconst limitedJobs = jobsNeedingContacts.slice(0, 10);\n\nreturn limitedJobs;"
+      },
+      "id": "limit-and-filter-jobs",
+      "name": "Limit to 10 Jobs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 400],
+      "notes": "🔢 LIMIT & FILTER\n\nPURPOSE: Respect Apollo.io free tier limits\n\nFREE TIER: 50 credits/month\n- 1 contact search = 1 credit\n- 10 jobs/day = 300/month (would exceed)\n- So we limit to 10 jobs per run\n\nFILTER LOGIC:\n- Skip jobs already processed\n- Check Notes field for 'Contact search completed'\n\nTO ADJUST:\n- Change .slice(0, 10) to .slice(0, 20)\n- But monitor Apollo credits carefully!\n\nWHAT TO SET:\n✅ Nothing! Auto-limits."
+    },
+    {
+      "parameters": {
+        "url": "=https://api.apollo.io/v1/mixed_people/search",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "api_key",
+              "value": "YOUR_APOLLO_API_KEY_HERE"
+            },
+            {
+              "name": "organization_name",
+              "value": "={{ $json.companyName || $json['Company Name'] }}"
+            },
+            {
+              "name": "person_titles",
+              "value": "Recruiter,Talent Acquisition,HR,Hiring Manager"
+            },
+            {
+              "name": "per_page",
+              "value": "5"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "search-apollo-contacts",
+      "name": "Search Apollo.io for Contacts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [900, 400],
+      "notes": "🔍 APOLLO.IO CONTACT SEARCH\n\n⚠️ CRITICAL SETUP:\n\n1. Sign up at: https://app.apollo.io\n2. Go to Settings → API → Get API Key\n3. Paste API key in 'api_key' query parameter\n\nAPI ENDPOINT:\nhttps://api.apollo.io/v1/mixed_people/search\n\nQUERY PARAMETERS:\n- organization_name: Company from job posting\n- person_titles: Recruiter, Talent Acquisition, HR\n- per_page: 5 (get top 5 contacts)\n\nFREE TIER:\n- 50 credits/month\n- 1 search = 1 credit\n- Resets monthly\n\nRESPONSE:\n- Array of people with:\n  - name\n  - title\n  - email (if available)\n  - linkedin_url\n  - phone (rarely available)\n\nERROR HANDLING:\n- 401: Invalid API key\n- 429: Rate limit exceeded\n- 404: Company not found\n\nFALLBACK:\n- If no results, we'll flag for manual search"
+    }
+  ],
+  "connections": {
+    "Start from Module 4/5": {
+      "main": [[{"node": "Read Jobs Needing Contacts", "type": "main", "index": 0}]]
+    },
+    "Read Jobs Needing Contacts": {
+      "main": [[{"node": "Limit to 10 Jobs", "type": "main", "index": 0}]]
+    },
+    "Limit to 10 Jobs": {
+      "main": [[{"node": "Search Apollo.io for Contacts", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

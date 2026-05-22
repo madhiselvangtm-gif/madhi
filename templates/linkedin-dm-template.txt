@@ -1,0 +1,23 @@
+Hi {CONTACT_NAME},
+
+{MESSAGE_BODY}
+
+{CALL_TO_ACTION}
+
+Best,
+{YOUR_NAME}
+
+---
+
+TEMPLATE VARIABLES:
+- {CONTACT_NAME}: First name only
+- {MESSAGE_BODY}: 2-3 sentences max (LinkedIn DMs should be SHORT)
+- {CALL_TO_ACTION}: Simple next step
+- {YOUR_NAME}: Your first name
+
+TONE: Casual, friendly, very brief (under 100 words)
+LINKEDIN BEST PRACTICES:
+- Keep it SHORT (3-4 lines max)
+- Personalize (mention their company/role)
+- Clear ask (can we connect? can you share insights?)
+- No attachments (LinkedIn doesn't allow in first message)

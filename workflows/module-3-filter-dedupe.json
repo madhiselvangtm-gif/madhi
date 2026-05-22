@@ -1,0 +1,214 @@
+{
+  "name": "Module 3 - Filter & Deduplicate",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "start-module-3",
+      "name": "Start from Module 2",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [240, 400],
+      "notes": "📥 INPUT FROM MODULE 2\n\nReceives raw job data from scrapers:\n- jobTitle\n- companyName\n- location\n- jobUrl\n- sourcePlatform\n- etc.\n\nThis is the entry point from Module 2."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Read filter configuration\nconst preferredKeywords = [\n  'outbound automation', 'lead generation', 'Apollo', 'Clay',\n  'cold email', 'LinkedIn outreach', 'CRM', 'AI automation',\n  'sales automation', 'prospecting', 'workflow automation',\n  'HubSpot', 'Salesforce'\n];\n\nconst excludedKeywords = [\n  'senior manager', 'field sales', 'door-to-door sales',\n  'customer support', 'unpaid internship'\n];\n\nconst priorityLocations = [\n  'Bangalore', 'Bengaluru', 'Hyderabad', 'Chennai',\n  'Coimbatore', 'Gurugram', 'Gurgaon', 'Mumbai'\n];\n\nconst items = $input.all();\nconst filteredJobs = [];\n\nfor (const item of items) {\n  const jobTitle = (item.json.title || item.json.jobTitle || '').toLowerCase();\n  const description = (item.json.description || item.json.contentSnippet || '').toLowerCase();\n  const location = (item.json.location || '').toLowerCase();\n  const fullText = `${jobTitle} ${description} ${location}`;\n  \n  // Check for excluded keywords (REJECT if found)\n  let shouldExclude = false;\n  for (const keyword of excludedKeywords) {\n    if (fullText.includes(keyword.toLowerCase())) {\n      shouldExclude = true;\n      break;\n    }\n  }\n  \n  if (shouldExclude) {\n    continue; // Skip this job\n  }\n  \n  // Calculate match score based on preferred keywords\n  let matchScore = 0;\n  const matchedKeywords = [];\n  \n  for (const keyword of preferredKeywords) {\n    if (fullText.includes(keyword.toLowerCase())) {\n      matchScore += 10;\n      matchedKeywords.push(keyword);\n    }\n  }\n  \n  // Bonus points for priority locations\n  for (const loc of priorityLocations) {\n    if (location.includes(loc.toLowerCase())) {\n      matchScore += 20;\n      break;\n    }\n  }\n  \n  // Only keep jobs with score >= 30 (at least 3 keyword matches or 1 keyword + location)\n  if (matchScore >= 30) {\n    filteredJobs.push({\n      json: {\n        ...item.json,\n        matchScore: matchScore,\n        matchedKeywords: matchedKeywords.join(', '),\n        filterStatus: 'Passed'\n      }\n    });\n  }\n}\n\nreturn filteredJobs;"
+      },
+      "id": "apply-keyword-filter",
+      "name": "Apply Keyword Filter",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 400],
+      "notes": "🔍 KEYWORD FILTER\n\nPURPOSE: Filter jobs based on keywords\n\nFILTER LOGIC:\n1. EXCLUDE jobs with blacklisted keywords\n2. SCORE jobs based on preferred keywords (10 pts each)\n3. BONUS for priority locations (20 pts)\n4. Keep only jobs with score >= 30\n\nWHAT TO SET:\n✅ Nothing by default - uses your criteria from config/job-filters.json\n\nTO CUSTOMIZE:\n- Edit the arrays in the code:\n  - preferredKeywords\n  - excludedKeywords\n  - priorityLocations\n- Adjust minimum matchScore threshold (currently 30)\n\nOUTPUT:\n- Filtered jobs with matchScore and matchedKeywords added"
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID_HERE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Jobs",
+          "mode": "list"
+        },
+        "filtersUI": {
+          "values": []
+        },
+        "options": {}
+      },
+      "id": "read-existing-jobs",
+      "name": "Read Existing Jobs from Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.2,
+      "position": [680, 400],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_CREDENTIALS_ID",
+          "name": "Google Sheets - Job Hunt"
+        }
+      },
+      "notes": "📊 READ FROM GOOGLE SHEETS\n\n⚠️ SETUP REQUIRED:\n\n1. Configure Google Sheets credential (same as Module 1)\n2. Set Document ID: Your Google Sheet ID\n3. Set Sheet Name: 'Jobs'\n4. Operation: 'Read Rows'\n\nPURPOSE: Read all existing jobs to check for duplicates\n\nOUTPUT: Array of all jobs currently in your sheet\n\nWHY NEEDED:\n- Deduplication logic needs to know what jobs already exist\n- Prevents adding same job twice\n\nNOTE: This reads ALL rows, so it may be slow if you have 1000+ jobs.\nConsider archiving old jobs monthly."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get filtered jobs from previous node\nconst newJobs = $('Apply Keyword Filter').all();\n\n// Get existing jobs from Google Sheets\nconst existingJobs = $('Read Existing Jobs from Sheet').all();\n\n// Create a Set of existing job URLs for fast lookup\nconst existingUrls = new Set();\nfor (const job of existingJobs) {\n  const url = job.json['Job URL'] || job.json.link || job.json.jobUrl;\n  if (url) {\n    existingUrls.add(url.trim().toLowerCase());\n  }\n}\n\n// Filter out duplicates\nconst uniqueJobs = [];\nconst duplicates = [];\n\nfor (const job of newJobs) {\n  const url = (job.json.link || job.json.jobUrl || '').trim().toLowerCase();\n  \n  if (!url) {\n    // No URL - skip this job\n    continue;\n  }\n  \n  if (existingUrls.has(url)) {\n    // Duplicate found\n    duplicates.push({\n      json: {\n        ...job.json,\n        duplicateStatus: 'Duplicate - Skipped'\n      }\n    });\n  } else {\n    // New unique job\n    uniqueJobs.push({\n      json: {\n        ...job.json,\n        duplicateStatus: 'New - Added'\n      }\n    });\n    // Add to set to prevent duplicates within this batch\n    existingUrls.add(url);\n  }\n}\n\n// Return only unique jobs\nreturn uniqueJobs;"
+      },
+      "id": "deduplicate-jobs",
+      "name": "Deduplicate Jobs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 400],
+      "notes": "🔄 DEDUPLICATION ENGINE\n\nPURPOSE: Remove duplicate jobs already in your sheet\n\nDEDUPE LOGIC:\n1. Read all existing job URLs from sheet\n2. Compare new jobs against existing URLs\n3. Keep only truly new jobs\n\nDEDUPE KEY: Job URL (unique identifier)\n- LinkedIn: linkedin.com/jobs/view/123456\n- Indeed: indeed.com/viewjob?jk=abc123\n\nWHY URL:\n- Most reliable unique identifier\n- Same job may have different titles\n- Company name may vary slightly\n\nWHAT TO SET:\n✅ Nothing! Works automatically.\n\nOUTPUT:\n- Only new, unique jobs\n- Adds 'duplicateStatus' field"
+    }
+  ],
+    {
+      "parameters": {
+        "jsCode": "// Format jobs to match Google Sheets schema\nconst jobs = $input.all();\nconst runId = $('Start from Module 2').first().json.runId;\nconst timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);\n\nconst formattedJobs = jobs.map(job => {\n  const data = job.json;\n  \n  // Generate unique Job ID\n  const platform = data.sourcePlatform || 'Unknown';\n  const urlMatch = (data.link || data.jobUrl || '').match(/\\d+/);\n  const jobId = `${platform.toLowerCase()}-${urlMatch ? urlMatch[0] : Date.now()}`;\n  \n  // Extract location\n  let location = data.location || '';\n  if (location.includes('·')) {\n    location = location.split('·')[0].trim();\n  }\n  \n  // Determine work mode\n  const fullText = `${data.title || ''} ${data.description || ''} ${location}`.toLowerCase();\n  let workMode = 'On-site';\n  if (fullText.includes('remote')) workMode = 'Remote';\n  else if (fullText.includes('hybrid')) workMode = 'Hybrid';\n  \n  return {\n    json: {\n      jobId: jobId,\n      dateScraped: new Date().toISOString().split('T')[0],\n      sourcePlatform: platform,\n      jobTitle: data.title || data.jobTitle || 'Unknown',\n      companyName: data.creator || data.company || 'Unknown',\n      companySize: 'Unknown',\n      location: location || 'Not Specified',\n      workMode: workMode,\n      experienceLevel: 'Mid-Level',\n      salaryRange: 'Not Specified',\n      jobDescription: (data.contentSnippet || data.description || '').substring(0, 500),\n      keySkills: data.matchedKeywords || '',\n      jobUrl: data.link || data.jobUrl || '',\n      postedDate: data.pubDate ? new Date(data.pubDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],\n      applicationDeadline: 'Not Specified',\n      matchScore: data.matchScore || 0,\n      status: 'Discovered',\n      resumeLink: '',\n      notes: `Filtered and added by automation. Run ID: ${runId}`,\n      lastUpdated: timestamp\n    }\n  };\n});\n\nreturn formattedJobs;"
+      },
+      "id": "format-for-sheets",
+      "name": "Format for Google Sheets",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 400],
+      "notes": "📋 FORMAT FOR SHEETS\n\nPURPOSE: Transform filtered jobs into Google Sheets schema format\n\nMAPPING:\n- RSS 'title' → jobTitle\n- RSS 'creator' → companyName\n- RSS 'link' → jobUrl\n- RSS 'pubDate' → postedDate\n- RSS 'contentSnippet' → jobDescription\n\nADDED FIELDS:\n- jobId: Generated unique ID\n- matchScore: From filtering\n- status: 'Discovered'\n- dateScraped: Today\n- lastUpdated: Current timestamp\n\nWHAT TO SET:\n✅ Nothing! Auto-formats to match schema.\n\nOUTPUT: Jobs ready to write to sheet"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false
+          },
+          "conditions": [
+            {
+              "id": "has-jobs",
+              "leftValue": "={{ $json }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "check-if-jobs-exist",
+      "name": "Any Jobs to Add?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1340, 400],
+      "notes": "✅ CHECK IF JOBS EXIST\n\nPURPOSE: Verify we have jobs to add before proceeding\n\nLOGIC:\n- IF jobs exist → Continue to Module 4\n- IF no jobs → Skip to end (log 'no new jobs')\n\nWHY NEEDED:\n- Prevent errors in downstream modules\n- Log when no new jobs found\n- Save API calls if nothing to process\n\nWHAT TO SET:\n✅ Nothing! Works automatically."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "output-jobs",
+              "name": "filteredJobs",
+              "value": "={{ $json }}",
+              "type": "object"
+            },
+            {
+              "id": "output-count",
+              "name": "jobCount",
+              "value": "={{ $itemIndex + 1 }}",
+              "type": "number"
+            },
+            {
+              "id": "output-runid",
+              "name": "runId",
+              "value": "={{ $('Start from Module 2').first().json.runId }}",
+              "type": "string"
+            },
+            {
+              "id": "output-status",
+              "name": "status",
+              "value": "Filtered",
+              "type": "string"
+            },
+            {
+              "id": "output-message",
+              "name": "message",
+              "value": "Jobs filtered and deduplicated successfully. Ready for Module 4.",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "output-to-module-4",
+      "name": "Output to Module 4",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [1560, 300],
+      "notes": "🚀 OUTPUT TO MODULE 4\n\nPURPOSE: Prepare data for next module (Sheets Logger)\n\nOUTPUT DATA:\n- filteredJobs: Array of jobs to add\n- jobCount: Number of new jobs\n- runId: Execution ID\n- status: 'Filtered'\n\nNEXT MODULE: Module 4 - Google Sheets Logger\n- Will write these jobs to the Jobs tab\n\nWHAT TO SET:\n✅ Nothing! Auto-prepares output."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "no-jobs-runid",
+              "name": "runId",
+              "value": "={{ $('Start from Module 2').first().json.runId }}",
+              "type": "string"
+            },
+            {
+              "id": "no-jobs-count",
+              "name": "jobCount",
+              "value": "=0",
+              "type": "number"
+            },
+            {
+              "id": "no-jobs-status",
+              "name": "status",
+              "value": "No New Jobs",
+              "type": "string"
+            },
+            {
+              "id": "no-jobs-message",
+              "name": "message",
+              "value": "No new jobs found after filtering and deduplication. Either all jobs were duplicates or none matched your criteria.",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "no-jobs-found",
+      "name": "No New Jobs Found",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [1560, 500],
+      "notes": "⚠️ NO JOBS PATH\n\nTRIGGERED WHEN:\n- All jobs were duplicates\n- No jobs matched filter criteria\n- Scrapers returned empty results\n\nACTION:\n- Log 'No new jobs' status\n- Skip resume tailoring (Module 5-7)\n- Jump directly to Module 8 (Notifier)\n\nWHAT TO SET:\n✅ Nothing! Auto-handles empty state."
+    }
+  ],
+  "connections": {
+    "Start from Module 2": {
+      "main": [[{"node": "Apply Keyword Filter", "type": "main", "index": 0}]]
+    },
+    "Apply Keyword Filter": {
+      "main": [[{"node": "Read Existing Jobs from Sheet", "type": "main", "index": 0}]]
+    },
+    "Read Existing Jobs from Sheet": {
+      "main": [[{"node": "Deduplicate Jobs", "type": "main", "index": 0}]]
+    },
+    "Deduplicate Jobs": {
+      "main": [[{"node": "Format for Google Sheets", "type": "main", "index": 0}]]
+    },
+    "Format for Google Sheets": {
+      "main": [[{"node": "Any Jobs to Add?", "type": "main", "index": 0}]]
+    },
+    "Any Jobs to Add?": {
+      "main": [
+        [{"node": "Output to Module 4", "type": "main", "index": 0}],
+        [{"node": "No New Jobs Found", "type": "main", "index": 0}]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

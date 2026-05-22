@@ -1,0 +1,431 @@
+{
+  "name": "Module 1 - Scheduler & Trigger",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 7 * * *"
+            }
+          ]
+        }
+      },
+      "id": "node-scheduler-cron",
+      "name": "Daily Scheduler - 7 AM IST",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        300
+      ],
+      "notes": "⏰ CRON TRIGGER\n\nPURPOSE: Fires the entire workflow once per day at 7:00 AM IST\n\nCRON EXPRESSION: 0 7 * * *\n- 0 = minute (00)\n- 7 = hour (7 AM)\n- * = any day of month\n- * = any month\n- * = any day of week\n\nTIMEZONE: Your n8n must be configured to IST (UTC+5:30)\n\nWHAT TO SET:\n1. Click this node\n2. Verify \"Trigger Interval\" = \"Cron\"\n3. Verify \"Cron Expression\" = \"0 7 * * *\"\n4. Save\n\nTO TEST:\n- Click \"Execute Node\" to simulate a trigger\n- Or click \"Execute Workflow\" at the top\n\nTO CHANGE TIME:\n- 8 AM: Change to \"0 8 * * *\"\n- 6:30 AM: Change to \"30 6 * * *\"\n- Every 6 hours: Change to \"0 */6 * * *\"\n\nIMPORTANT: This triggers ALL downstream modules automatically!"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get current execution details\nconst now = new Date();\nconst workflowId = $workflow.id;\nconst executionId = $execution.id;\n\n// Format timestamp for IST\nconst istOffset = 5.5 * 60 * 60 * 1000; // IST is UTC+5:30\nconst istTime = new Date(now.getTime() + istOffset);\nconst timestamp = istTime.toISOString().replace('T', ' ').substring(0, 19);\n\n// Generate unique run ID\nconst runId = `run-${istTime.toISOString().split('T')[0]}-${executionId}`;\n\n// Return execution metadata\nreturn {\n  json: {\n    runId: runId,\n    executionId: executionId,\n    workflowId: workflowId,\n    timestamp: timestamp,\n    date: istTime.toISOString().split('T')[0],\n    time: istTime.toTimeString().split(' ')[0],\n    timezone: 'IST',\n    module: 'Module 1 - Scheduler',\n    status: 'Started',\n    message: 'Workflow execution initiated successfully'\n  }\n};"
+      },
+      "id": "node-execution-metadata",
+      "name": "Generate Execution Metadata",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ],
+      "notes": "📋 EXECUTION METADATA GENERATOR\n\nPURPOSE: Creates unique identifiers and timestamps for this workflow run\n\nOUTPUT:\n- runId: Unique ID for this execution\n- executionId: n8n's internal execution ID\n- timestamp: Current time in IST\n- date, time: Separated date and time values\n\nWHY NEEDED:\n- Track which jobs were found in which run\n- Deduplicate across multiple daily runs\n- Create execution logs\n- Debug issues by execution ID\n\nWHAT TO SET:\n✅ Nothing! This node works automatically.\n\nJUST VERIFY:\n- Click \"Execute Node\" to test\n- Check the output has: runId, timestamp, date, time\n\nNOTE: This metadata flows to ALL downstream modules"
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:5678/webhook/health-check",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "id": "node-health-check",
+      "name": "Health Check Endpoint",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        680,
+        180
+      ],
+      "notes": "🏥 HEALTH CHECK (OPTIONAL)\n\nPURPOSE: Verify n8n and dependent services are running\n\nWHAT IT DOES:\n- Pings a webhook endpoint to check if n8n responds\n- Timeout after 5 seconds if no response\n- Continues workflow even if fails (non-blocking)\n\nWHAT TO SET:\n1. Create a simple webhook in n8n:\n   - New workflow → Add \"Webhook\" node\n   - Path: /health-check\n   - Response: {\"status\": \"ok\"}\n   - Activate it\n\n2. Update the URL in this node:\n   - If n8n on localhost: http://localhost:5678/webhook/health-check\n   - If on VPS: https://your-n8n-domain.com/webhook/health-check\n\nOPTIONAL:\n- You can disable this node (click node → Disable)\n- Or delete it if you don't need health checks\n\nERROR HANDLING:\n- If this fails, workflow still continues\n- Check \"Ignore SSL Issues\" if using self-signed cert"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false
+          },
+          "conditions": [
+            {
+              "id": "condition-health-ok",
+              "leftValue": "={{ $json.statusCode }}",
+              "rightValue": "200",
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "node-health-check-validator",
+      "name": "Health Check OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        900,
+        180
+      ],
+      "notes": "✅ HEALTH CHECK VALIDATOR\n\nPURPOSE: Check if health check endpoint responded with status 200\n\nLOGIC:\n- IF statusCode = 200 → Continue (healthy)\n- ELSE → Log warning but continue anyway\n\nWHAT TO SET:\n✅ Nothing! This works automatically.\n\nOUTPUTS:\n- TRUE path: Health check passed\n- FALSE path: Health check failed (will log warning)\n\nNOTE: Workflow continues regardless of health check result"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Health check failed - log warning\nconst metadata = $('Generate Execution Metadata').first().json;\n\nreturn {\n  json: {\n    ...metadata,\n    status: 'Warning',\n    message: 'Health check failed but continuing workflow execution',\n    healthStatus: 'Unhealthy'\n  }\n};"
+      },
+      "id": "node-health-warning",
+      "name": "Log Health Warning",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        280
+      ],
+      "notes": "⚠️ HEALTH WARNING LOGGER\n\nPURPOSE: If health check fails, log it but continue\n\nWHAT TO SET:\n✅ Nothing! Auto-logs warnings.\n\nThis outputs warning data that flows to the Logs tab in Google Sheets."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Health check passed\nconst metadata = $('Generate Execution Metadata').first().json;\n\nreturn {\n  json: {\n    ...metadata,\n    status: 'Success',\n    message: 'Health check passed - system healthy',\n    healthStatus: 'Healthy'\n  }\n};"
+      },
+      "id": "node-health-success",
+      "name": "Log Health Success",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        80
+      ],
+      "notes": "✅ HEALTH SUCCESS LOGGER\n\nPURPOSE: If health check succeeds, log success\n\nWHAT TO SET:\n✅ Nothing! Auto-logs success.\n\nThis outputs success data that flows to the Logs tab."
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition",
+        "options": {}
+      },
+      "id": "node-merge-health-results",
+      "name": "Merge Health Results",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        1340,
+        180
+      ],
+      "notes": "🔀 MERGE NODE\n\nPURPOSE: Combine both health check paths (success + warning) back into one flow\n\nWHY NEEDED:\n- Both IF branches need to merge before continuing\n- Ensures workflow continues regardless of health status\n\nWHAT TO SET:\n✅ Nothing! This merges automatically.\n\nMODE: Merge By Position\n- Takes first item from each input\n- Continues with combined data"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "init-log-entry",
+              "name": "logId",
+              "value": "={{ $json.runId }}-init",
+              "type": "string"
+            },
+            {
+              "id": "init-timestamp",
+              "name": "timestamp",
+              "value": "={{ $json.timestamp }}",
+              "type": "string"
+            },
+            {
+              "id": "init-run-id",
+              "name": "workflowRunId",
+              "value": "={{ $json.executionId }}",
+              "type": "string"
+            },
+            {
+              "id": "init-module",
+              "name": "module",
+              "value": "Module 1 - Scheduler",
+              "type": "string"
+            },
+            {
+              "id": "init-action",
+              "name": "action",
+              "value": "Workflow Started",
+              "type": "string"
+            },
+            {
+              "id": "init-status",
+              "name": "status",
+              "value": "={{ $json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "init-records",
+              "name": "recordsProcessed",
+              "value": "=0",
+              "type": "number"
+            },
+            {
+              "id": "init-error",
+              "name": "errorMessage",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "init-retry",
+              "name": "retryCount",
+              "value": "=0",
+              "type": "number"
+            },
+            {
+              "id": "init-notes",
+              "name": "notes",
+              "value": "={{ $json.message }}. Health Status: {{ $json.healthStatus }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-format-log-entry",
+      "name": "Format Log Entry",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [
+        1560,
+        180
+      ],
+      "notes": "📝 FORMAT LOG ENTRY\n\nPURPOSE: Structure the data to match Google Sheets Logs tab schema\n\nMAPPING (matches 02-GOOGLE-SHEETS-SCHEMA.md):\n- Column A: logId\n- Column B: timestamp\n- Column C: workflowRunId\n- Column D: module\n- Column E: action\n- Column F: status\n- Column G: recordsProcessed\n- Column H: errorMessage\n- Column I: retryCount\n- Column J: notes\n\nWHAT TO SET:\n✅ Nothing! This formats automatically.\n\nVERIFY:\n- Click \"Execute Node\" and check output matches Logs schema"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID_HERE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Logs",
+          "mode": "list",
+          "cachedResultName": "Logs"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "logId": "={{ $json.logId }}",
+            "timestamp": "={{ $json.timestamp }}",
+            "workflowRunId": "={{ $json.workflowRunId }}",
+            "module": "={{ $json.module }}",
+            "action": "={{ $json.action }}",
+            "status": "={{ $json.status }}",
+            "recordsProcessed": "={{ $json.recordsProcessed }}",
+            "errorMessage": "={{ $json.errorMessage }}",
+            "retryCount": "={{ $json.retryCount }}",
+            "notes": "={{ $json.notes }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "node-write-to-logs",
+      "name": "Write to Logs Tab",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.2,
+      "position": [
+        1780,
+        180
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_CREDENTIALS_ID",
+          "name": "Google Sheets - Job Hunt"
+        }
+      },
+      "notes": "📊 WRITE TO GOOGLE SHEETS - LOGS TAB\n\nPURPOSE: Log this workflow execution start to the Logs tab\n\n⚠️ REQUIRED SETUP:\n\n1. GET YOUR GOOGLE SHEET ID:\n   - Open your Google Sheet\n   - Copy the ID from URL: \n     https://docs.google.com/spreadsheets/d/[THIS-IS-THE-ID]/edit\n\n2. CONFIGURE THIS NODE:\n   a) Click this node\n   b) Under \"Credential to connect with\":\n      - Click \"Select Credential\"\n      - Click \"+ Create New Credential\"\n      - Select \"Google Sheets OAuth2 API\"\n      - Click \"Connect my account\"\n      - Sign in with Google\n      - Grant permissions\n      - Save\n   \n   c) Under \"Document\":\n      - Click \"From list\" or \"By ID\"\n      - Paste your Sheet ID: YOUR_GOOGLE_SHEET_ID_HERE\n   \n   d) Under \"Sheet\":\n      - Select \"Logs\" from dropdown\n   \n   e) Verify \"Operation\" = \"Append or Update Row\"\n   \n   f) Verify \"Columns\" mapping matches your sheet structure\n\n3. TEST:\n   - Click \"Execute Node\"\n   - Check your Google Sheet → Logs tab\n   - Should see a new row with execution data\n\nTROUBLESHOOTING:\n- \"Sheet not found\": Verify tab name is exactly \"Logs\"\n- \"Insufficient permissions\": Re-authenticate Google credentials\n- \"Document not found\": Verify Sheet ID is correct"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "output-run-id",
+              "name": "runId",
+              "value": "={{ $('Generate Execution Metadata').first().json.runId }}",
+              "type": "string"
+            },
+            {
+              "id": "output-timestamp",
+              "name": "timestamp",
+              "value": "={{ $('Generate Execution Metadata').first().json.timestamp }}",
+              "type": "string"
+            },
+            {
+              "id": "output-date",
+              "name": "date",
+              "value": "={{ $('Generate Execution Metadata').first().json.date }}",
+              "type": "string"
+            },
+            {
+              "id": "output-status",
+              "name": "status",
+              "value": "Ready",
+              "type": "string"
+            },
+            {
+              "id": "output-message",
+              "name": "message",
+              "value": "Scheduler completed successfully. Ready to trigger Module 2 (Job Scraper).",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-output-to-module-2",
+      "name": "Output to Module 2",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [
+        2000,
+        180
+      ],
+      "notes": "🚀 OUTPUT TO NEXT MODULE\n\nPURPOSE: Prepare clean output data to pass to Module 2 (Job Scraper)\n\nOUTPUT DATA:\n- runId: To tag all jobs scraped in this run\n- timestamp: Current execution time\n- date: Today's date (for deduplication)\n- status: Ready (indicates Module 1 completed)\n\nNEXT STEP:\n- This data flows to Module 2 - Job Scraper\n- Module 2 will use runId to tag all scraped jobs\n\nWHAT TO SET:\n✅ Nothing! This prepares output automatically.\n\nIN MASTER WORKFLOW:\n- This node connects to Module 2's start node\n- Creates seamless data flow between modules"
+    }
+  ],
+  "connections": {
+    "Daily Scheduler - 7 AM IST": {
+      "main": [
+        [
+          {
+            "node": "Generate Execution Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Execution Metadata": {
+      "main": [
+        [
+          {
+            "node": "Health Check Endpoint",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Health Check Endpoint": {
+      "main": [
+        [
+          {
+            "node": "Health Check OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Health Check OK?": {
+      "main": [
+        [
+          {
+            "node": "Log Health Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Health Warning",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Health Success": {
+      "main": [
+        [
+          {
+            "node": "Merge Health Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Health Warning": {
+      "main": [
+        [
+          {
+            "node": "Merge Health Results",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Health Results": {
+      "main": [
+        [
+          {
+            "node": "Format Log Entry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Log Entry": {
+      "main": [
+        [
+          {
+            "node": "Write to Logs Tab",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write to Logs Tab": {
+      "main": [
+        [
+          {
+            "node": "Output to Module 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2026-05-22T00:00:00.000Z",
+      "updatedAt": "2026-05-22T00:00:00.000Z",
+      "id": "job-hunt-automation",
+      "name": "Job Hunt Automation"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2026-05-22T00:00:00.000Z",
+  "versionId": "1.0"
+}

@@ -1,0 +1,25 @@
+# Credentials and sensitive data
+*.env
+credentials.json
+secrets/
+.secrets
+
+# n8n sensitive files
+*-credentials.json
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Personal data
+resume-personal.pdf
+contacts-private.csv

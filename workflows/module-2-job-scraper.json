@@ -1,0 +1,17 @@
+{
+  "name": "Module 2 - Job Scraper (RSS + HTTP)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "start-module-2",
+      "name": "Start from Module 1",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [240, 400]
+    }
+  ],
+  "connections": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

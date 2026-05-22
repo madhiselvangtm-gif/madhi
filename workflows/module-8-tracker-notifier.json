@@ -1,0 +1,118 @@
+{
+  "name": "Module 8 - Tracker & Notifier",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "start-module-8",
+      "name": "Start from Module 7",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [240, 400],
+      "notes": "📥 INPUT FROM MODULE 7\n\nReceives:\n- runId: Execution ID\n- outreachGenerated: Count of messages\n- status: 'Outreach Generated'\n\nThis is the final module - tracks everything and notifies you."
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID_HERE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Logs",
+          "mode": "list"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "workflowRunId",
+              "lookupValue": "={{ $('Start from Module 7').first().json.runId }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "read-execution-logs",
+      "name": "Read Execution Logs",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.2,
+      "position": [460, 400],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_CREDENTIALS_ID",
+          "name": "Google Sheets - Job Hunt"
+        }
+      },
+      "notes": "📊 READ EXECUTION LOGS\n\n⚠️ SETUP REQUIRED:\n\n1. Google Sheets credential\n2. Sheet ID\n3. Sheet: 'Logs'\n4. Filter: workflowRunId = current runId\n\nPURPOSE: Gather all logs from this execution\n\nWHAT IT READS:\n- Module 1 logs (workflow started)\n- Module 4 logs (jobs written)\n- Any errors from other modules\n\nUSED FOR:\n- Summary statistics\n- Error detection\n- Notification content"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Summarize today's execution\nconst logs = $input.all();\nconst metadata = $('Start from Module 7').first().json;\n\n// Count records processed by each module\nlet jobsScraped = 0;\nlet jobsFiltered = 0;\nlet jobsLogged = 0;\nlet contactsFound = 0;\nlet outreachGenerated = 0;\nlet errors = [];\n\nfor (const log of logs) {\n  const data = log.json;\n  const module = data.module || '';\n  const status = data.status || '';\n  const records = parseInt(data.recordsProcessed || data['Records Processed'] || 0);\n  \n  if (module.includes('Module 2') && status === 'Success') jobsScraped += records;\n  if (module.includes('Module 3') && status === 'Success') jobsFiltered += records;\n  if (module.includes('Module 4') && status === 'Success') jobsLogged += records;\n  if (module.includes('Module 6') && status === 'Success') contactsFound += records;\n  if (module.includes('Module 7') && status === 'Success') outreachGenerated += records;\n  \n  if (status === 'Error') {\n    errors.push({\n      module: module,\n      error: data.errorMessage || data['Error Message']\n    });\n  }\n}\n\nreturn [{\n  json: {\n    runId: metadata.runId,\n    executionDate: new Date().toISOString().split('T')[0],\n    executionTime: new Date().toTimeString().split(' ')[0],\n    jobsScraped: jobsScraped,\n    jobsFiltered: jobsFiltered,\n    jobsLogged: jobsLogged,\n    contactsFound: contactsFound,\n    outreachGenerated: outreachGenerated,\n    totalErrors: errors.length,\n    errors: errors,\n    status: errors.length > 0 ? 'Completed with Errors' : 'Success'\n  }\n}];"
+      },
+      "id": "summarize-execution",
+      "name": "Summarize Execution",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 400],
+      "notes": "📊 SUMMARIZE EXECUTION\n\nPURPOSE: Create execution summary from all logs\n\nSUMMARY INCLUDES:\n- Jobs scraped (Module 2)\n- Jobs filtered (Module 3)\n- Jobs logged (Module 4)\n- Contacts found (Module 6)\n- Outreach generated (Module 7)\n- Error count\n- Overall status\n\nUSED FOR:\n- Notifications\n- Performance tracking\n- Error detection\n\nWHAT TO SET:\n✅ Nothing! Auto-summarizes."
+    },
+    {
+      "parameters": {
+        "message": "=🎯 **Job Hunt Automation - Daily Summary**\n\n📅 Date: {{ $json.executionDate }}\n⏰ Time: {{ $json.executionTime }} IST\n\n📊 **Today's Results:**\n🔍 Jobs Scraped: {{ $json.jobsScraped }}\n✅ Jobs Filtered: {{ $json.jobsFiltered }}\n📝 Jobs Logged: {{ $json.jobsLogged }}\n👥 Contacts Found: {{ $json.contactsFound }}\n✉️ Outreach Generated: {{ $json.outreachGenerated }}\n\n{{ $json.totalErrors > 0 ? '⚠️ Errors: ' + $json.totalErrors : '✅ Status: All modules completed successfully!' }}\n\n📂 Check your Google Sheet for details:\nhttps://docs.google.com/spreadsheets/d/YOUR_SHEET_ID\n\n---\nNext run: Tomorrow at 7:00 AM IST",
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "additionalFields": {}
+      },
+      "id": "send-telegram-notification",
+      "name": "Send Telegram Notification",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [900, 300],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram - Job Hunt Bot"
+        }
+      },
+      "notes": "📱 TELEGRAM NOTIFICATION\n\n⚠️ CRITICAL SETUP:\n\n1. Create Telegram bot:\n   - Message @BotFather on Telegram\n   - Send: /newbot\n   - Name your bot\n   - Copy the API token\n\n2. Get your chat ID:\n   - Message your bot\n   - Visit: https://api.telegram.org/bot<TOKEN>/getUpdates\n   - Find your chat ID in the response\n\n3. Configure this node:\n   - Credential: Paste bot token\n   - Chat ID: Your chat ID\n   - Message: Already configured\n\nPURPOSE: Send daily summary to your Telegram\n\nMESSAGE INCLUDES:\n- Date and time\n- All module statistics\n- Error alerts\n- Link to Google Sheet\n\nTO CUSTOMIZE:\n- Edit the message template\n- Add emojis, formatting\n- Include/exclude metrics"
+    },
+    {
+      "parameters": {
+        "sendTo": "YOUR_EMAIL@gmail.com",
+        "subject": "=Job Hunt Automation - Daily Report ({{ $json.executionDate }})",
+        "emailFormat": "html",
+        "message": "=<h2>🎯 Job Hunt Automation - Daily Summary</h2>\n\n<p><strong>Date:</strong> {{ $json.executionDate }}<br>\n<strong>Time:</strong> {{ $json.executionTime }} IST</p>\n\n<h3>📊 Today's Results</h3>\n<ul>\n  <li>🔍 <strong>Jobs Scraped:</strong> {{ $json.jobsScraped }}</li>\n  <li>✅ <strong>Jobs Filtered:</strong> {{ $json.jobsFiltered }}</li>\n  <li>📝 <strong>Jobs Logged:</strong> {{ $json.jobsLogged }}</li>\n  <li>👥 <strong>Contacts Found:</strong> {{ $json.contactsFound }}</li>\n  <li>✉️ <strong>Outreach Generated:</strong> {{ $json.outreachGenerated }}</li>\n</ul>\n\n{{ $json.totalErrors > 0 ? '<p style=\"color: red;\">⚠️ <strong>Errors Detected:</strong> ' + $json.totalErrors + '</p>' : '<p style=\"color: green;\">✅ <strong>Status:</strong> All modules completed successfully!</p>' }}\n\n<p><a href=\"https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID\">📂 Open Google Sheet</a></p>\n\n<hr>\n<p style=\"font-size: 12px; color: #666;\">Next run: Tomorrow at 7:00 AM IST<br>\nAutomated by n8n Job Hunt System</p>",
+        "options": {}
+      },
+      "id": "send-email-notification",
+      "name": "Send Email Notification",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [900, 500],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAIL_CREDENTIALS_ID",
+          "name": "Gmail - Personal"
+        }
+      },
+      "notes": "📧 EMAIL NOTIFICATION\n\n⚠️ SETUP REQUIRED:\n\n1. Configure Gmail OAuth:\n   - Click 'Select Credential'\n   - 'Create New Credential'\n   - 'Gmail OAuth2'\n   - Sign in with your Gmail\n   - Grant permissions\n\n2. Set recipient:\n   - 'Send To': YOUR_EMAIL@gmail.com\n   - Replace with your actual email\n\n3. Customize message:\n   - Already configured with HTML\n   - Edit template if needed\n\nPURPOSE: Send formatted email summary\n\nEMAIL INCLUDES:\n- HTML formatted summary\n- All statistics\n- Error alerts (red color)\n- Clickable link to Sheet\n\nTO CUSTOMIZE:\n- Edit HTML template\n- Change colors, styling\n- Add charts/graphs"
+    }
+  ],
+  "connections": {
+    "Start from Module 7": {
+      "main": [[{"node": "Read Execution Logs", "type": "main", "index": 0}]]
+    },
+    "Read Execution Logs": {
+      "main": [[{"node": "Summarize Execution", "type": "main", "index": 0}]]
+    },
+    "Summarize Execution": {
+      "main": [[
+        {"node": "Send Telegram Notification", "type": "main", "index": 0},
+        {"node": "Send Email Notification", "type": "main", "index": 0}
+      ]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

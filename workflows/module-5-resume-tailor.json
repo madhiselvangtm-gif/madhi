@@ -1,0 +1,98 @@
+{
+  "name": "Module 5 - Resume Tailor",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "start-module-5",
+      "name": "Start from Module 4",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [240, 400],
+      "notes": "📥 INPUT FROM MODULE 4\n\nReceives:\n- runId: Execution ID\n- jobsLogged: Count of jobs added\n- status: 'Logged'\n\nThis module will now read jobs from Google Sheets and tailor resumes for each."
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID_HERE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Jobs",
+          "mode": "list"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "status",
+              "lookupValue": "Discovered"
+            }
+          ]
+        },
+        "options": {
+          "rangeDefinition": "specifyRange",
+          "range": "A:T"
+        }
+      },
+      "id": "read-jobs-to-tailor",
+      "name": "Read Jobs (Status=Discovered)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.2,
+      "position": [460, 400],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_CREDENTIALS_ID",
+          "name": "Google Sheets - Job Hunt"
+        }
+      },
+      "notes": "📊 READ JOBS FOR RESUME TAILORING\n\n⚠️ SETUP REQUIRED:\n\n1. Google Sheets credential\n2. Sheet ID\n3. Sheet Name: 'Jobs'\n4. Filter: status = 'Discovered'\n\nPURPOSE: Read only NEW jobs that need resumes\n\nFILTER LOGIC:\n- Only jobs with status='Discovered'\n- These haven't been processed yet\n- Prevents re-processing same jobs\n\nOUTPUT: Array of jobs needing tailored resumes\n\nLIMIT: Set to 10 jobs per run to avoid rate limits.\nYou can increase this later."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Limit to first 10 jobs to avoid overwhelming the AI API\nconst allJobs = $input.all();\nconst limitedJobs = allJobs.slice(0, 10);\n\nreturn limitedJobs;"
+      },
+      "id": "limit-jobs",
+      "name": "Limit to 10 Jobs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 400],
+      "notes": "🔢 LIMIT JOBS\n\nPURPOSE: Process max 10 jobs per run\n\nWHY LIMIT:\n- Prevent API rate limits (OpenAI/Ollama)\n- Reduce cost (OpenAI charges per token)\n- Faster execution\n- Jobs will be processed in next day's run\n\nTO CHANGE LIMIT:\n- Edit code: Change .slice(0, 10) to .slice(0, 20)\n- Or remove limit: return $input.all();\n\nRECOMMENDED:\n- Start with 10\n- Monitor costs/performance\n- Increase gradually if needed"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "master-resume",
+              "name": "masterResume",
+              "value": "PASTE_YOUR_MASTER_RESUME_HERE",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "load-master-resume",
+      "name": "Load Master Resume",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [900, 400],
+      "notes": "📄 LOAD MASTER RESUME\n\n⚠️ CRITICAL SETUP:\n\nYou MUST paste your master resume here!\n\n1. Click this node\n2. Find the 'masterResume' assignment\n3. Replace 'PASTE_YOUR_MASTER_RESUME_HERE' with your actual resume text\n4. Include:\n   - Your complete resume\n   - All sections (Summary, Experience, Skills, etc.)\n   - Keep formatting simple (plain text)\n\nTIPS:\n- Use plain text format\n- Keep bullet points as dashes (-) or asterisks (*)\n- Avoid special characters\n- This becomes the base for all tailored resumes\n\nEXAMPLE FORMAT:\n[Your Name]\n[Contact Info]\n\nPROFESSIONAL SUMMARY\n- Experienced SDR with 3 years...\n\nEXPERIENCE\nCompany Name | SDR | 2023-Present\n- Generated 50+ qualified leads...\n\nSKILLS\n- Apollo.io, HubSpot, Salesforce\n- Cold email, LinkedIn outreach"
+    }
+  ],
+  "connections": {
+    "Start from Module 4": {
+      "main": [[{"node": "Read Jobs (Status=Discovered)", "type": "main", "index": 0}]]
+    },
+    "Read Jobs (Status=Discovered)": {
+      "main": [[{"node": "Limit to 10 Jobs", "type": "main", "index": 0}]]
+    },
+    "Limit to 10 Jobs": {
+      "main": [[{"node": "Load Master Resume", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "name": "Module 2 - Job Scraper (Simplified RSS)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "start-module-2",
+      "name": "Start from Module 1",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [240, 400],
+      "notes": "📥 INPUT FROM MODULE 1\n\nReceives:\n- runId\n- timestamp\n- date\n\nThis connects from Module 1's output in the master workflow."
+    },
+    {
+      "parameters": {
+        "url": "https://www.linkedin.com/jobs/search/?keywords=Sales%20Development%20Representative&location=India&f_WT=2",
+        "options": {}
+      },
+      "id": "scrape-linkedin-rss",
+      "name": "Scrape LinkedIn Jobs (RSS)",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [460, 300],
+      "notes": "🔗 LINKEDIN RSS SCRAPER\n\n⚠️ SETUP REQUIRED:\n1. Go to: https://www.linkedin.com/jobs/\n2. Search: 'Sales Development Representative India'\n3. Apply filters (Remote, Mid-Level, etc.)\n4. Copy the URL from address bar\n5. Add '/feed' to the end\n6. Paste here as Feed URL\n\nExample:\nhttps://www.linkedin.com/jobs/search/?keywords=SDR&location=India/feed\n\nf_WT=2 means Remote jobs only"
+    },
+    {
+      "parameters": {
+        "url": "https://www.indeed.co.in/rss?q=BDR&l=Bangalore&fromage=7",
+        "options": {}
+      },
+      "id": "scrape-indeed-rss",
+      "name": "Scrape Indeed Jobs (RSS)",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [460, 500],
+      "notes": "🔗 INDEED RSS SCRAPER\n\n⚠️ SETUP REQUIRED:\n1. Go to: https://www.indeed.co.in/\n2. Search: 'BDR Bangalore'\n3. Copy the URL\n4. Change '/jobs?' to '/rss?'\n5. Add '&fromage=7' for last 7 days only\n6. Paste here as Feed URL\n\nExample:\nhttps://www.indeed.co.in/rss?q=SDR&l=Bangalore&fromage=7"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition",
+        "options": {}
+      },
+      "id": "merge-job-sources",
+      "name": "Merge All Job Sources",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [680, 400],
+      "notes": "🔀 MERGE NODE\n\nCombines jobs from LinkedIn + Indeed into one stream.\n\nNothing to configure."
+    }
+  ]
+}

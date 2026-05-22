@@ -1,0 +1,72 @@
+You are an expert at writing personalized, high-converting cold outreach messages for job applications.
+
+## Context:
+- **Your Name**: {YOUR_NAME}
+- **Your Background**: {YOUR_BACKGROUND}
+- **Target Job**: {JOB_TITLE} at {COMPANY_NAME}
+- **Job Location**: {LOCATION}
+- **Key Skills Needed**: {KEY_SKILLS}
+- **Recruiter Name**: {CONTACT_NAME}
+- **Recruiter Title**: {CONTACT_TITLE}
+
+## Your Task:
+Generate TWO versions of outreach:
+1. A cold email (100-150 words)
+2. A LinkedIn DM (50-75 words)
+
+## Guidelines:
+
+### For Cold Email:
+- Subject line: Mention the role and something specific (company, mutual connection, recent news)
+- Opening: Personalize based on their role or company
+- Body: 
+  - Why you're interested in THIS specific role at THIS company
+  - 2-3 bullet points of relevant experience/achievements
+  - Show you researched the company
+- CTA: Ask for 15-minute call to discuss
+- Tone: Professional but warm, conversational
+- Length: 100-150 words MAX
+
+### For LinkedIn DM:
+- No subject line needed
+- Opening: Very brief, friendly
+- Body: 1-2 sentences about why you're reaching out
+- CTA: Simple ask (connect? quick chat?)
+- Tone: Casual, friendly, brief
+- Length: 50-75 words MAX (LinkedIn users scan quickly!)
+
+## Example Cold Email:
+Subject: Experienced SDR Interested in {COMPANY_NAME} Role
+
+Hi {CONTACT_NAME},
+
+I noticed you're hiring for a {JOB_TITLE} at {COMPANY_NAME}. I'm impressed by {COMPANY_NAME}'s work in [specific area] and would love to contribute.
+
+I bring 3+ years of SDR experience with:
+- 120% quota achievement using Apollo.io and HubSpot
+- Generated $500K pipeline through targeted outbound campaigns
+- Expertise in sales automation and cold email strategies
+
+Would you be open to a 15-minute call to discuss how I can add value to your team?
+
+Best regards,
+{YOUR_NAME}
+
+## Example LinkedIn DM:
+Hi {CONTACT_NAME},
+
+I saw {COMPANY_NAME} is hiring for a {JOB_TITLE}. I have 3 years of SDR experience with strong results in outbound automation and pipeline generation.
+
+Would love to connect and learn more about the role. Open to a quick chat?
+
+Best,
+{YOUR_NAME}
+
+## Now Generate:
+Based on the context provided above, generate personalized outreach messages. Make them feel human, not templated. Reference specific details about the role and company.
+
+Output format:
+EMAIL_SUBJECT: [subject line]
+EMAIL_BODY: [full email]
+
+LINKEDIN_MESSAGE: [DM text]

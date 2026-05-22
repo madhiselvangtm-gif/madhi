@@ -1,0 +1,34 @@
+Subject: {SUBJECT_LINE}
+
+Hi {CONTACT_NAME},
+
+{OPENING_LINE}
+
+{BODY_PARAGRAPH_1}
+
+{BODY_PARAGRAPH_2}
+
+{CALL_TO_ACTION}
+
+{CLOSING}
+
+Best regards,
+{YOUR_NAME}
+{YOUR_TITLE}
+{YOUR_CONTACT}
+
+---
+
+TEMPLATE VARIABLES:
+- {SUBJECT_LINE}: Personalized subject (mention company or role)
+- {CONTACT_NAME}: First name only
+- {OPENING_LINE}: Personalized opener based on their role/company
+- {BODY_PARAGRAPH_1}: Why you're reaching out (interest in the role)
+- {BODY_PARAGRAPH_2}: Your relevant experience/value proposition
+- {CALL_TO_ACTION}: Next step (can we schedule 15 min call?)
+- {CLOSING}: Friendly sign-off
+- {YOUR_NAME}: Your full name
+- {YOUR_TITLE}: Your current/target title
+- {YOUR_CONTACT}: Email + LinkedIn + Phone
+
+TONE: Conversational, professional, concise (under 150 words)

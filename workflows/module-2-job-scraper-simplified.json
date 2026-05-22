@@ -12,7 +12,7 @@
     },
     {
       "parameters": {
-        "url": "https://www.linkedin.com/jobs/search/?keywords=Sales%20Development%20Representative&location=India&f_WT=2",
+        "url": "https://www.linkedin.com/jobs/search/?keywords=Sales%20Development%20Representative&location=India&f_WT=2/feed",
         "options": {}
       },
       "id": "scrape-linkedin-rss",
@@ -46,6 +46,135 @@
       "typeVersion": 2.1,
       "position": [680, 400],
       "notes": "🔀 MERGE NODE\n\nCombines jobs from LinkedIn + Indeed into one stream.\n\nNothing to configure."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "add-platform",
+              "name": "sourcePlatform",
+              "value": "={{ $node[\"Scrape LinkedIn Jobs (RSS)\"].json ? 'LinkedIn' : 'Indeed' }}",
+              "type": "string"
+            },
+            {
+              "id": "add-runid",
+              "name": "runId",
+              "value": "={{ $('Start from Module 1').first().json.runId }}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "add-metadata",
+      "name": "Add Metadata",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [900, 400],
+      "notes": "📝 ADD METADATA\n\nAdds tracking info to each job:\n- sourcePlatform (LinkedIn or Indeed)\n- runId (from Module 1)\n\nThis helps with deduplication later."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "output-runid",
+              "name": "runId",
+              "value": "={{ $('Start from Module 1').first().json.runId }}",
+              "type": "string"
+            },
+            {
+              "id": "output-count",
+              "name": "jobsScraped",
+              "value": "={{ $items().length }}",
+              "type": "number"
+            },
+            {
+              "id": "output-status",
+              "name": "status",
+              "value": "Scraped",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "output-to-module-3",
+      "name": "Output to Module 3",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [1120, 400],
+      "notes": "🚀 OUTPUT TO MODULE 3\n\nPrepares data for Filter & Dedupe module:\n- runId\n- jobsScraped count\n- status\n\nThis connects to Module 3's input."
     }
-  ]
+  ],
+  "connections": {
+    "Start from Module 1": {
+      "main": [
+        [
+          {
+            "node": "Scrape LinkedIn Jobs (RSS)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Scrape Indeed Jobs (RSS)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scrape LinkedIn Jobs (RSS)": {
+      "main": [
+        [
+          {
+            "node": "Merge All Job Sources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scrape Indeed Jobs (RSS)": {
+      "main": [
+        [
+          {
+            "node": "Merge All Job Sources",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge All Job Sources": {
+      "main": [
+        [
+          {
+            "node": "Add Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add Metadata": {
+      "main": [
+        [
+          {
+            "node": "Output to Module 3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2026-05-22T00:00:00.000Z",
+  "versionId": "1.0"
 }
